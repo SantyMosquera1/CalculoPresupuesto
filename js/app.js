@@ -2,7 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-
 const firebaseConfig = {
   apiKey: "AIzaSyB9nqFyVXrLmgMC1PD-TjdAKwmvKNGvwVk",
   authDomain: "apppresupuestos-b7ab2.firebaseapp.com",
@@ -20,11 +19,8 @@ let usuarioActual = null;
 
 console.log("¡Firebase conectado correctamente!");
 
-const ingresos = [
-];
-
-const egresos = [
-];
+const ingresos = [];
+const egresos = [];
 
 onAuthStateChanged(auth, async (user) => {
     const btnLogin = document.querySelector(".btn-login");
@@ -32,14 +28,11 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         usuarioActual = user;
         console.log("Sesión iniciada como:", user.displayName);
-        
         if (btnLogin) btnLogin.textContent = `Cerrar Sesión`;
-
         await cargarDatosFirebase();
     } else {
         usuarioActual = null;
         console.log("No hay sesión activa");
-        
         if (btnLogin) btnLogin.textContent = "Iniciar sesión";
 
         ingresos.length = 0;
@@ -63,77 +56,75 @@ const iniciarSesionGoogle = async () => {
     }
 };
 
-
 let cargarApp = () => {
     cargarCabecero();
     cargarIngresos();
     cargarEgresos();
-}
+};
 
 let totalIngresos = () => {
     let totalIngreso = 0;
-    for(let ingreso of ingresos){
+    for (let ingreso of ingresos) {
         totalIngreso += ingreso.valor;
     }
     return totalIngreso;
-}
+};
 
 let totalEgresos = () => {
     let totalEgreso = 0;
-    for(let egreso of egresos){
+    for (let egreso of egresos) {
         totalEgreso += egreso.valor;
     }
     return totalEgreso;
-}
+};
 
 let cargarCabecero = () => {
     let presupuesto = totalIngresos() - totalEgresos();
-    let porcentajeEgreso = totalEgresos() / totalIngresos();
-    document.getElementById('presupuesto').innerHTML = formatoMoneda (presupuesto);
-    document.getElementById('porcentaje').innerHTML = formatoPorcentaje (porcentajeEgreso);
-    document.getElementById('ingresos').innerHTML = formatoMoneda (totalIngresos());
-    document.getElementById( 'egresos' ).innerHTML = formatoMoneda (totalEgresos());
+    let porcentajeEgreso = totalIngresos() > 0 ? totalEgresos() / totalIngresos() : 0;
+    document.getElementById('presupuesto').innerHTML = formatoMoneda(presupuesto);
+    document.getElementById('porcentaje').innerHTML = formatoPorcentaje(porcentajeEgreso);
+    document.getElementById('ingresos').innerHTML = formatoMoneda(totalIngresos());
+    document.getElementById('egresos').innerHTML = formatoMoneda(totalEgresos());
+};
 
-}
+const formatoMoneda = (valor) => {
+    return valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 2 });
+};
 
-const formatoMoneda = (valor) =>{
-    return valor.toLocaleString('es-CO',{style:'currency', currency:'COP',  minimumFractionDigits:2});
-}
+const formatoPorcentaje = (valor) => {
+    return valor.toLocaleString('es-CO', { style: 'percent', minimumFractionDigits: 1 });
+};
 
-const formatoPorcentaje = (valor) =>{
-    return valor.toLocaleString('es-CO',{style:'percent',  minimumFractionDigits:1});
-}
-
-const cargarIngresos = () =>{
+const cargarIngresos = () => {
     let ingresosHTLM = '';
-    for(let ingreso of ingresos){
+    for (let ingreso of ingresos) {
         ingresosHTLM += crearIngresoHTML(ingreso);
     }
-    document.getElementById('lista-ingresos').innerHTML=ingresosHTLM;
-}
+    document.getElementById('lista-ingresos').innerHTML = ingresosHTLM;
+};
 
 const crearIngresoHTML = (ingreso) => {
-    let ingresoHTML = `
+    return `
     <div class="elemento limpiarAF">
         <div class="elemento_descripcion">${ingreso.descripcion}</div>
         <div class="derecha limpiarAF">
             <div class="elemento_valor">+ ${formatoMoneda(ingreso.valor)}</div>
             <div class="elemento_eliminar">
-                <button class='elemento_eliminar--btn'>
-                    <ion-icon name="close-circle-outline"
-                    onclick="eliminarIngreso('${ingreso.id}')"></ion-icon>
+                <button class='elemento_eliminar--btn' onclick="eliminarIngreso('${ingreso.id}')">
+                    <ion-icon name="close-circle-outline"></ion-icon>
                 </button>
             </div>
         </div>
     </div>
     `;
-    return ingresoHTML;
 };
 
 const eliminarIngreso = async (id) => {
-    let indiceEliminar = ingresos.findIndex(ingreso => ingreso.id === id);
+    let indiceEliminar = ingresos.findIndex(ingreso => ingreso.id == id);
     
-    if (usuarioActual && ingresos[indiceEliminar]?.id) {
+    if (indiceEliminar === -1) return;
+
+    if (usuarioActual) {
         try {
             await deleteDoc(doc(db, "presupuesto", ingresos[indiceEliminar].id));
             await cargarDatosFirebase();
@@ -147,37 +138,37 @@ const eliminarIngreso = async (id) => {
     }
 };
 
-const cargarEgresos = () =>{
+const cargarEgresos = () => {
     let egresosHTLM = '';
-    for(let egreso of egresos){
+    for (let egreso of egresos) {
         egresosHTLM += crearEgresoHTML(egreso);
     }
-    document.getElementById('lista-egresos').innerHTML=egresosHTLM;
-}
+    document.getElementById('lista-egresos').innerHTML = egresosHTLM;
+};
 
 const crearEgresoHTML = (egreso) => {
-    let egresoHTML = `
+    return `
     <div class="elemento limpiarAF">
         <div class="elemento_descripcion">${egreso.descripcion}</div>
         <div class="derecha limpiarAF">
             <div class="elemento_valor">- ${formatoMoneda(egreso.valor)}</div>
-            <div class="elemento_porcentaje">${formatoPorcentaje(egreso.valor/totalEgresos())}</div>
+            <div class="elemento_porcentaje">${formatoPorcentaje(egreso.valor / (totalEgresos() || 1))}</div>
             <div class="elemento_eliminar">
-                <button class='elemento_eliminar--btn'>
-                    <ion-icon name="close-circle-outline"
-                    onclick="eliminarEgreso('${egreso.id}')"></ion-icon>
+                <button class='elemento_eliminar--btn' onclick="eliminarEgreso('${egreso.id}')">
+                    <ion-icon name="close-circle-outline"></ion-icon>
                 </button>
             </div>
         </div>
     </div>
     `;
-    return egresoHTML;
 };
 
 const eliminarEgreso = async (id) => {
-    let indiceEliminar = egresos.findIndex(egreso => egreso.id === id);
+    let indiceEliminar = egresos.findIndex(egreso => egreso.id == id);
     
-    if (usuarioActual && egresos[indiceEliminar]?.id) {
+    if (indiceEliminar === -1) return;
+
+    if (usuarioActual) {
         try {
             await deleteDoc(doc(db, "presupuesto", egresos[indiceEliminar].id));
             await cargarDatosFirebase();
@@ -205,11 +196,11 @@ const cargarDatosFirebase = async () => {
             const data = docSnap.data();
             if (data.tipo === "ingreso") {
                 let ing = new Ingreso(data.descripcion, data.valor);
-                ing._id = docSnap.id; // Asignamos usando _id
+                ing._id = docSnap.id; // Asignación correcta a la propiedad privada
                 ingresos.push(ing);
             } else if (data.tipo === "egreso") {
                 let egr = new Egreso(data.descripcion, data.valor);
-                egr._id = docSnap.id; // Asignamos usando _id
+                egr._id = docSnap.id; // Asignación correcta a la propiedad privada
                 egresos.push(egr);
             }
         });
@@ -252,7 +243,6 @@ let agregarDato = async () => {
     }
 };
 
-// Función para habilitar el deslizamiento hacia la izquierda en celulares
 const habilitarSwipeEliminar = () => {
     let startX = 0;
     let currentX = 0;
@@ -271,8 +261,7 @@ const habilitarSwipeEliminar = () => {
         currentX = e.touches[0].clientX;
         const diffX = currentX - startX;
 
-        // Solo permite desplazar hacia la izquierda hasta -120px
-        if (diffX < 0 && diffX > -120) {
+        if (Math.abs(diffX) < 150) {
             elementoActual.style.transform = `translateX(${diffX}px)`;
         }
     }, { passive: true });
@@ -280,22 +269,22 @@ const habilitarSwipeEliminar = () => {
     document.addEventListener('touchend', () => {
         if (!elementoActual) return;
         const diffX = currentX - startX;
-        elementoActual.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+        const targetElement = elementoActual;
+        targetElement.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
 
-        // Si se deslizó más de 75px a la izquierda, ejecuta la eliminación
-        if (diffX < -75) {
-            elementoActual.style.transform = 'translateX(-100%)';
-            elementoActual.style.opacity = '0';
+        if (Math.abs(diffX) > 70) {
+            const direccion = diffX > 0 ? '100%' : '-100%';
+            targetElement.style.transform = `translateX(${direccion})`;
+            targetElement.style.opacity = '0';
 
             setTimeout(() => {
-                const btnEliminar = elementoActual.querySelector('.elemento_eliminar_btn, button');
+                const btnEliminar = targetElement.querySelector('.elemento_eliminar--btn') || targetElement.querySelector('button');
                 if (btnEliminar) {
                     btnEliminar.click();
                 }
-            }, 250);
+            }, 200);
         } else {
-            // Si no fue suficiente, vuelve a su posición original
-            elementoActual.style.transform = 'translateX(0)';
+            targetElement.style.transform = 'translateX(0)';
         }
 
         startX = 0;
