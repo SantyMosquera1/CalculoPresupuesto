@@ -40,7 +40,7 @@ onAuthStateChanged(auth, async (user) => {
         usuarioActual = null;
         console.log("No hay sesión activa");
         
-        if (btnLogin) btnLogin.textContent = "Iniciar sesión con Google";
+        if (btnLogin) btnLogin.textContent = "Iniciar sesión";
 
         ingresos.length = 0;
         egresos.length = 0;

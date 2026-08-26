@@ -343,3 +343,39 @@ h2 {
     display: table;
     clear: both;
 }
+
+/* Adaptación para pantallas móviles */
+@media screen and (max-width: 700px) {
+    .cabecero {
+        height: auto !important; /* Anula la altura fija de la línea 264 */
+        padding-top: 60px !important; /* Espacio superior para separar el texto del botón */
+        padding-bottom: 25px !important;
+    }
+
+    .btn-login {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        transform: none; /* Elimina el centrado para pegarlo a la izquierda */
+        z-index: 100;
+        font-size: 11px; /* Tamaño ajustado para pantallas angostas */
+        padding: 5px 10px;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    /* Formulario en columna para celular */
+    .agregar_contenedor {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .agregar_tipo, 
+    .agregar_descripcion, 
+    .agregar_valor {
+        width: 90% !important;
+        margin-right: 0 !important;
+    }
+}
