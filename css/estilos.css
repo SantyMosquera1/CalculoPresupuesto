@@ -159,7 +159,24 @@ body {
 
 .agregar_btn:active { transform: translateY(2px); }
 
-.agregar_tipo:focus,
+.agregar_tipo {
+    width: 125px;
+    height: 44px;
+    border: 1px solid #e7e7e7;
+    border-radius: 5px;
+    background-color: #ffffff;
+    font-family: inherit;
+    font-size: 14px;
+    color: #555555;
+    padding: 0 10px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.agregar_tipo:focus {
+    border-color: #28b9b5;
+}
 .agregar_descripcion:focus,
 .agregar_valor:focus {
     outline: none;
