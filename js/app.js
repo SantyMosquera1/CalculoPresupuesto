@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 
 const firebaseConfig = {
@@ -28,26 +28,38 @@ const egresos = [
 
 onAuthStateChanged(auth, async (user) => {
     const btnLogin = document.querySelector(".btn-login");
-    
+
     if (user) {
         usuarioActual = user;
         console.log("Sesión iniciada como:", user.displayName);
         
         if (btnLogin) btnLogin.textContent = `Hola, ${user.displayName.split(' ')[0]}`;
-        
+
         await cargarDatosFirebase();
     } else {
         usuarioActual = null;
+        console.log("No hay sesión activa");
+        
         if (btnLogin) btnLogin.textContent = "Iniciar sesión con Google";
-        cargarApp();
+
+        ingresos.length = 0;
+        egresos.length = 0;
+        cargarCabecero();
+        cargarIngresos();
+        cargarEgresos();
     }
 });
 
 const iniciarSesionGoogle = async () => {
     try {
-        await signInWithPopup(auth, provider);
+        if (usuarioActual) {
+            await signOut(auth);
+            console.log("Sesión cerrada correctamente");
+        } else {
+            await signInWithPopup(auth, provider);
+        }
     } catch (error) {
-        console.error("Error al iniciar sesión:", error);
+        console.error("Error en la autenticación:", error);
     }
 };
 
@@ -100,31 +112,40 @@ const cargarIngresos = () =>{
     document.getElementById('lista-ingresos').innerHTML=ingresosHTLM;
 }
 
-const crearIngresoHTML = (ingreso) =>{
-    let ingresoHTLM = `
-    <div class="elemento limpiarEstilos">
-    <div class="elemento_descripcion">${ingreso.descripcion}</div>
-    <div class="derecha limpiarEstilos">
-        <div class="elemento_valor">${formatoMoneda(ingreso.valor)}</div>
-        <div class="elemento_eliminar">
-            <button class="elemento_eliminar--btn">
-                <ion-icon name="remove-circle-outline"
-                   onclick='eliminarIngreso(${ingreso.id})' 
-                ></ion-icon>
-            </button>
+const crearIngresoHTML = (ingreso) => {
+    let ingresoHTML = `
+    <div class="elemento limpiarAF">
+        <div class="elemento_descripcion">${ingreso.descripcion}</div>
+        <div class="derecha limpiarAF">
+            <div class="elemento_valor">+ ${formatoMoneda(ingreso.valor)}</div>
+            <div class="elemento_eliminar">
+                <button class='elemento_eliminar--btn'>
+                    <ion-icon name="close-circle-outline"
+                    onclick="eliminarIngreso('${ingreso.id}')"></ion-icon>
+                </button>
+            </div>
         </div>
     </div>
-</div>
     `;
-    return ingresoHTLM;
-}
+    return ingresoHTML;
+};
 
-const eliminarIngreso = (id) => {
-    let indiceEliminar = ingresos.findIndex(ingreso=> ingreso.id===id); //devuelve el indice del elemento que cumple la condicion, -1 si no lo encuentra
-    ingresos.splice(indiceEliminar,1);
-    cargarCabecero();
-    cargarIngresos();
-}
+const eliminarIngreso = async (id) => {
+    let indiceEliminar = ingresos.findIndex(ingreso => ingreso.id === id);
+    
+    if (usuarioActual && ingresos[indiceEliminar]?.id) {
+        try {
+            await deleteDoc(doc(db, "presupuesto", ingresos[indiceEliminar].id));
+            await cargarDatosFirebase();
+        } catch (error) {
+            console.error("Error al eliminar de Firestore:", error);
+        }
+    } else {
+        ingresos.splice(indiceEliminar, 1);
+        cargarCabecero();
+        cargarIngresos();
+    }
+};
 
 const cargarEgresos = () =>{
     let egresosHTLM = '';
@@ -134,54 +155,71 @@ const cargarEgresos = () =>{
     document.getElementById('lista-egresos').innerHTML=egresosHTLM;
 }
 
-const crearEgresoHTML = (egreso) =>{
-    let egresoHTLM = `
-    <div class="elemento limpiarEstilos">
+const crearEgresoHTML = (egreso) => {
+    let egresoHTML = `
+    <div class="elemento limpiarAF">
         <div class="elemento_descripcion">${egreso.descripcion}</div>
-        <div class="derecha limpiarEstilos">
-            <div class="elemento_valor">${formatoMoneda(egreso.valor)}</div>
+        <div class="derecha limpiarAF">
+            <div class="elemento_valor">- ${formatoMoneda(egreso.valor)}</div>
             <div class="elemento_porcentaje">${formatoPorcentaje(egreso.valor/totalEgresos())}</div>
             <div class="elemento_eliminar">
-                <button class="elemento_eliminar--btn">
-                    <ion-icon name="remove-circle-outline"
-                    onclick='eliminarEgreso(${egreso.id})' 
-                    ></ion-icon>
+                <button class='elemento_eliminar--btn'>
+                    <ion-icon name="close-circle-outline"
+                    onclick="eliminarEgreso('${egreso.id}')"></ion-icon>
                 </button>
             </div>
         </div>
     </div>
     `;
-    return egresoHTLM;
-}
+    return egresoHTML;
+};
 
-let eliminarEgreso = (id) => {
-    let indiceEliminar = egresos.findIndex(egreso=> egreso.id===id); //devuelve el indice del elemento que cumple la condicion, -1 si no lo encuentra
-    egresos.splice(indiceEliminar,1);
-    cargarCabecero();
-    cargarEgresos();
-}
+const eliminarEgreso = async (id) => {
+    let indiceEliminar = egresos.findIndex(egreso => egreso.id === id);
+    
+    if (usuarioActual && egresos[indiceEliminar]?.id) {
+        try {
+            await deleteDoc(doc(db, "presupuesto", egresos[indiceEliminar].id));
+            await cargarDatosFirebase();
+        } catch (error) {
+            console.error("Error al eliminar de Firestore:", error);
+        }
+    } else {
+        egresos.splice(indiceEliminar, 1);
+        cargarCabecero();
+        cargarEgresos();
+    }
+};
 
 const cargarDatosFirebase = async () => {
     if (!usuarioActual) return;
 
-    ingresos.length = 0;
-    egresos.length = 0;
+    try {
+        const q = query(collection(db, "presupuesto"), where("uid", "==", usuarioActual.uid));
+        const querySnapshot = await getDocs(q);
 
-    const q = query(collection(db, "presupuesto"), where("uid", "==", usuarioActual.uid));
-    const querySnapshot = await getDocs(q);
+        ingresos.length = 0;
+        egresos.length = 0;
 
-    querySnapshot.forEach((doc) => {
-        let dato = doc.data();
-        if (dato.tipo === "ingreso") {
-            ingresos.push(new Ingreso(dato.descripcion, Number(dato.valor)));
-        } else if (dato.tipo === "egreso") {
-            egresos.push(new Egreso(dato.descripcion, Number(dato.valor)));
-        }
-    });
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            if (data.tipo === "ingreso") {
+                let ing = new Ingreso(data.descripcion, data.valor);
+                ing._id = docSnap.id; // Asignamos usando _id
+                ingresos.push(ing);
+            } else if (data.tipo === "egreso") {
+                let egr = new Egreso(data.descripcion, data.valor);
+                egr._id = docSnap.id; // Asignamos usando _id
+                egresos.push(egr);
+            }
+        });
 
-    cargarCabecero();
-    cargarIngresos();
-    cargarEgresos();
+        cargarCabecero();
+        cargarIngresos();
+        cargarEgresos();
+    } catch (error) {
+        console.error("Error al cargar datos desde Firestore:", error);
+    }
 };
 
 let agregarDato = async () => {
