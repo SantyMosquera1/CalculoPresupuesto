@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyB9nqFyVXrLmgMC1PD-TjdAKwmvKNGvwVk",
@@ -17,6 +17,29 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 let usuarioActual = null;
 
+// ==========================================
+// CONTROL DE INACTIVIDAD (LÍMITE DE TIEMPO)
+// ==========================================
+let temporizadorInactividad;
+const TIEMPO_MAXIMO_INACTIVIDAD = 15 * 60 * 1000; // 15 minutos en milisegundos
+
+const reiniciarTemporizadorInactividad = () => {
+    clearTimeout(temporizadorInactividad);
+    if (usuarioActual) {
+        temporizadorInactividad = setTimeout(async () => {
+            console.warn("Sesión cerrada por inactividad.");
+            await signOut(auth);
+            alert("Tu sesión se ha cerrado por inactividad por razones de seguridad.");
+        }, TIEMPO_MAXIMO_INACTIVIDAD);
+    }
+};
+
+const escucharInteraccionUsuario = () => {
+    ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'].forEach(evento => {
+        document.addEventListener(evento, reiniciarTemporizadorInactividad, { passive: true });
+    });
+};
+
 console.log("¡Firebase conectado correctamente!");
 
 const ingresos = [];
@@ -30,11 +53,16 @@ onAuthStateChanged(auth, async (user) => {
         console.log("Sesión iniciada como:", user.displayName);
         if (btnLogin) btnLogin.textContent = `Cerrar Sesión`;
         await cargarDatosFirebase();
+
+        // Inicia monitoreo de inactividad al iniciar sesión
+        escucharInteraccionUsuario();
+        reiniciarTemporizadorInactividad();
     } else {
         usuarioActual = null;
         console.log("No hay sesión activa");
         if (btnLogin) btnLogin.textContent = "Iniciar sesión";
 
+        clearTimeout(temporizadorInactividad);
         ingresos.length = 0;
         egresos.length = 0;
         cargarCabecero();
@@ -49,6 +77,8 @@ const iniciarSesionGoogle = async () => {
             await signOut(auth);
             console.log("Sesión cerrada correctamente");
         } else {
+            // Establece que la sesión expire al cerrar la ventana/pestaña
+            await setPersistence(auth, browserSessionPersistence);
             await signInWithPopup(auth, provider);
         }
     } catch (error) {
@@ -196,11 +226,11 @@ const cargarDatosFirebase = async () => {
             const data = docSnap.data();
             if (data.tipo === "ingreso") {
                 let ing = new Ingreso(data.descripcion, data.valor);
-                ing._id = docSnap.id; // Asignación correcta a la propiedad privada
+                ing._id = docSnap.id;
                 ingresos.push(ing);
             } else if (data.tipo === "egreso") {
                 let egr = new Egreso(data.descripcion, data.valor);
-                egr._id = docSnap.id; // Asignación correcta a la propiedad privada
+                egr._id = docSnap.id;
                 egresos.push(egr);
             }
         });
