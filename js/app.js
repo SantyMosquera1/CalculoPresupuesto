@@ -33,7 +33,7 @@ onAuthStateChanged(auth, async (user) => {
         usuarioActual = user;
         console.log("Sesión iniciada como:", user.displayName);
         
-        if (btnLogin) btnLogin.textContent = `Hola, ${user.displayName.split(' ')[0]}`;
+        if (btnLogin) btnLogin.textContent = `Cerrar Sesión`;
 
         await cargarDatosFirebase();
     } else {
