@@ -195,8 +195,10 @@ h2 {
 .egreso_titulo { color: #FF5049; }
 
 .elemento {
-    padding: 13px;
+    padding: 14px 0;
     border-bottom: 1px solid #e7e7e7;
+    height: auto; /* Permite que el contenedor se expanda según el texto */
+    overflow: hidden; /* Ajusta la caja al tamaño exacto de los elementos hijos */
 }
 
 .elemento:first-child { border-top: 1px solid #e7e7e7; }
