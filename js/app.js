@@ -252,6 +252,60 @@ let agregarDato = async () => {
     }
 };
 
+// Función para habilitar el deslizamiento hacia la izquierda en celulares
+const habilitarSwipeEliminar = () => {
+    let startX = 0;
+    let currentX = 0;
+    let elementoActual = null;
+
+    document.addEventListener('touchstart', (e) => {
+        const elemento = e.target.closest('.elemento');
+        if (!elemento) return;
+        elementoActual = elemento;
+        startX = e.touches[0].clientX;
+        elementoActual.style.transition = 'none';
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!elementoActual) return;
+        currentX = e.touches[0].clientX;
+        const diffX = currentX - startX;
+
+        // Solo permite desplazar hacia la izquierda hasta -120px
+        if (diffX < 0 && diffX > -120) {
+            elementoActual.style.transform = `translateX(${diffX}px)`;
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+        if (!elementoActual) return;
+        const diffX = currentX - startX;
+        elementoActual.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
+        // Si se deslizó más de 75px a la izquierda, ejecuta la eliminación
+        if (diffX < -75) {
+            elementoActual.style.transform = 'translateX(-100%)';
+            elementoActual.style.opacity = '0';
+
+            setTimeout(() => {
+                const btnEliminar = elementoActual.querySelector('.elemento_eliminar_btn, button');
+                if (btnEliminar) {
+                    btnEliminar.click();
+                }
+            }, 250);
+        } else {
+            // Si no fue suficiente, vuelve a su posición original
+            elementoActual.style.transform = 'translateX(0)';
+        }
+
+        startX = 0;
+        currentX = 0;
+        elementoActual = null;
+    });
+};
+
+document.addEventListener('DOMContentLoaded', habilitarSwipeEliminar);
+
 window.cargarApp = cargarApp;
 window.agregarDato = agregarDato;
 window.iniciarSesionGoogle = iniciarSesionGoogle;
