@@ -337,3 +337,9 @@ h2 {
 .btn-login:hover {
     background-color: #f0f0f0;
 }
+
+.limpiarAF::after {
+    content: "";
+    display: table;
+    clear: both;
+}
